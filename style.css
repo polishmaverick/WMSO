@@ -1,0 +1,12 @@
+/* Ustawienia koloru w motywie readthedown */
+  .rmdformat ul.nav li.current a {
+    background-color: #4e79a7;
+      color: #fff;
+  }
+.rmdformat ul.nav li a:hover {
+  background-color: #4e79a7;
+    color: #fff;
+}
+.rmdformat .breadcrumb > li.active {
+  color: #000;
+}

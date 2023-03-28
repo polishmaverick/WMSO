@@ -1,30 +1,107 @@
 ---
-title: "Outliers detection - Airbnb 2019"
+title: "Outliers detection - Airbnb New York City 2019"
 author: "Jarosław Szewczyk"
 date: '2023-03-28'
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+---------------------------------------------------------------------------------------------------
+#Przygotowanie środowiska
+---------------------------------------------------------------------------------------------------
+##Zainstalowanie i załadowanie pakietów
+```{r}
+packages = c("dplyr", "robustbase")
+install.packages(packages)
+library("dplyr")
+library("robust")
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+##Wczytanie zbioru danych
+```{r}
+data <- read.csv("AB_NYC_2019.csv", sep = ",")
 ```
 
-## Including Plots
+##Wstępna analiza zbioru danych
+```{r}
+#Wymiary zbioru
+dim(data)
 
-You can also embed plots, for example:
+#48895 obserwacji
+#16 zmiennych (włącznie z id)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+#Zmienne i typy danych
+str(data)
+#OPISAĆ
+
+#Braki danych
+colSums(is.na(data))
+#OPISAĆ
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+---------------------------------------------------------------------------------------------------
+#Wykrywanie elementów odstających - 1 wymiar
+---------------------------------------------------------------------------------------------------
+##Reguła 3 sigma
+```{r}
+threesigma.rule <- function(data, var, t = 3, RemoveNAs = FALSE){
+  mu <- mean(data[[var]], na.rm = RemoveNAs)
+  sigma <- sd(data[[var]], na.rm = RemoveNAs)
+  out <- abs(data[[var]] - mu) > t*sigma
+  data.frame(id = data$id[out], var = data[[var]][out])
+}
+
+outliers_threesigma <- threesigma.rule(data, "price")
+outliers_threesigma
+```
+
+##Metoda Tukeya
+```{r}
+outliers <- function(data, var, coef = 1.5) {
+  bp <- boxplot(data[[var]], plot = FALSE)
+  out <- bp$out
+  stats <- boxplot.stats(data[[var]], coef = coef, do.conf = FALSE, do.out = TRUE)
+  data.frame(id = data$id[data[[var]] %in% stats$out], var = data[[var]][data[[var]] %in% stats$out])
+}
+
+outliers_Tukey <- outliers(data, "price")
+outliers_Tukey
+```
+
+##Reguła Hampela
+```{r}
+hampel.rule <- function(data, var_name, t = 3, RemoveNAs = FALSE){
+  x <- data[[var_name]]
+  mu <- median(x, na.rm = RemoveNAs)
+  sig <- mad(x, na.rm = RemoveNAs)
+  out <- which(abs(x - mu) > t*sig)
+  if (length(out) > 0) {
+    data.frame(id = data$id[out], value = x[out])
+  } else {
+    message("Brak wartości spełniających kryteria.")
+    return(NULL)
+  }
+}
+
+outliers_hampel <- hampel.rule(data, "price")
+outliers_hampel
+```
+
+##Z-score
+```{r}
+#1
+data$z_scores <- (abs(data$price - mean(data$price))/sd(data$price))
+outliers_zscore_sd <- data[data$z_scores > 3,][,c("id", "price")]
+outliers_zscore_sd
+
+#2
+data$z_scores <- (abs(data$price - median(data$price))/mad(data$price))
+outliers_zscore_mad <- data[data$z_scores > 3.5,][,c("id", "price")]
+outliers_zscore_mad
+```
+
+---------------------------------------------------------------------------------------------------
+#Wykrywanie elementów odstających - 2 wymiary lub więcej
+---------------------------------------------------------------------------------------------------
+```{r}
+
+```

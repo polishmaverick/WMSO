@@ -1,16 +1,18 @@
 ---
-title: "Outliers detection - Airbnb New York City 2019"
+title: "Outliers detection na podstawie zbioru Airbnb New York City 2019"
 author: "Jarosław Szewczyk"
 date: '2023-03-28'
-output: "default"
-  html_document: 
-    theme: "readthedocs"
-    css: "https://raw.githubusercontent.com/polishmaverick/WMSO/main/style.css"
+output:
+  rmdformats::readthedown:
+    highlight: default
 ---
-
 <style>
-h1.title {
-  font-size: 32px;
+h1.title
+{
+  font-size: 44px;
+  font-style: bold;
+  text-align: center;
+  color: black;
 }
 </style>
 ---
@@ -20,40 +22,37 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ---------------------------------------------------------------------------------------------------
-#Przygotowanie środowiska
+Przygotowanie środowiska
 ---------------------------------------------------------------------------------------------------
-##Zainstalowanie i załadowanie pakietów
+Zainstalowanie i załadowanie pakietów
 ```{r}
 library("dplyr")
+library("rmarkdown")
+library("rmdformats")
 library("robustbase")
 ```
 
-##Wczytanie zbioru danych
+Wczytanie zbioru danych
 ```{r}
 data <- read.csv("AB_NYC_2019.csv", sep = ",")
 ```
 
-##Wstępna analiza zbioru danych
+Wstępna analiza zbioru danych
 ```{r}
 #Wymiary zbioru
 dim(data)
 
-#48895 obserwacji
-#16 zmiennych (włącznie z id)
-
 #Zmienne i typy danych
 str(data)
-#OPISAĆ
 
 #Braki danych
 colSums(is.na(data))
-#OPISAĆ
 ```
 
 ---------------------------------------------------------------------------------------------------
-#Wykrywanie elementów odstających - 1 wymiar
+Wykrywanie elementów odstających - 1 wymiar
 ---------------------------------------------------------------------------------------------------
-##Reguła 3 sigma
+Reguła 3 sigma
 ```{r}
 threesigma.rule <- function(data, var, t = 3, RemoveNAs = FALSE){
   mu <- mean(data[[var]], na.rm = RemoveNAs)
@@ -63,10 +62,10 @@ threesigma.rule <- function(data, var, t = 3, RemoveNAs = FALSE){
 }
 
 outliers_threesigma <- threesigma.rule(data, "price")
-outliers_threesigma
+head(outliers_threesigma, 5)
 ```
 
-##Metoda Tukeya
+Metoda Tukeya
 ```{r}
 outliers <- function(data, var, coef = 1.5) {
   bp <- boxplot(data[[var]], plot = FALSE)
@@ -76,10 +75,10 @@ outliers <- function(data, var, coef = 1.5) {
 }
 
 outliers_Tukey <- outliers(data, "price")
-outliers_Tukey
+head(outliers_Tukey, 5)
 ```
 
-##Reguła Hampela
+Reguła Hampela
 ```{r}
 hampel.rule <- function(data, var_name, t = 3, RemoveNAs = FALSE){
   x <- data[[var_name]]
@@ -95,24 +94,58 @@ hampel.rule <- function(data, var_name, t = 3, RemoveNAs = FALSE){
 }
 
 outliers_hampel <- hampel.rule(data, "price")
-outliers_hampel
+head(outliers_hampel, 5)
 ```
 
-##Z-score
+Z-score
 ```{r}
-#1
 data$z_scores <- (abs(data$price - mean(data$price))/sd(data$price))
 outliers_zscore_sd <- data[data$z_scores > 3,][,c("id", "price")]
-outliers_zscore_sd
+head(outliers_zscore_sd, 5)
 
-#2
 data$z_scores <- (abs(data$price - median(data$price))/mad(data$price))
 outliers_zscore_mad <- data[data$z_scores > 3.5,][,c("id", "price")]
-outliers_zscore_mad
+head(outliers_zscore_mad, 5)
 ```
 
 ---------------------------------------------------------------------------------------------------
-#Wykrywanie elementów odstających - 2 wymiary lub więcej
+Do wykrycia wartości odstających można podejść podobnie jak do prognoz, które stawiane są różnymi metodami. Racjonalnym wyborem wydaje się być wyciąganie średniej z prognoz uzyskanych na podstawie  różnych metod. W przypadku wartości odstających analogią może być wybór tych obserwacji, które zostały zaklasyfikowane jako outliery przez wszystkie metody lub jak największą liczbę metod.
+---------------------------------------------------------------------------------------------------
+
+Ramka danych z podsumowaniem wyników - 1 wymiar
+```{r}
+data_one_dim <- data
+```
+
+Zdefiniowanie dla każdej z metod zmiennej om (outliers membership) świadczącej o przynależności do grupy outlierów
+```{r}
+data_one_dim$om1 <- as.numeric(data$id %in% outliers_threesigma$id)
+data_one_dim$om2 <- as.numeric(data$id %in% outliers_Tukey$id)
+data_one_dim$om3 <- as.numeric(data$id %in% outliers_hampel$id)
+data_one_dim$om4 <- as.numeric(data$id %in% outliers_zscore_sd$id)
+data_one_dim$om5 <- as.numeric(data$id %in% outliers_zscore_mad$id)
+```
+
+Tabela ze wskazaniami
+```{r}
+outliers_membership <- grep("om.$", names(data_one_dim), value=TRUE)
+data_one_dim$count <- rowSums(data_one_dim[, outliers_membership])
+table(data_one_dim$count)
+```
+
+Które metody nie wskazały przynależności do grupy outlierów?
+```{r}
+colSums(data_one_dim[data_one_dim$count == 3, c("id", outliers_membership)])
+```
+
+Wartość dla zmiennej 'price', od której w oparciu o wszystkie metody zaczyna się grupa outlierów
+```{r}
+outlier_one_dim_min <- min(data_one_dim[data_one_dim$count == 5, c("id", "price")])
+outlier_one_dim_min
+```
+
+---------------------------------------------------------------------------------------------------
+Wykrywanie elementów odstających - 2 wymiary lub więcej
 ---------------------------------------------------------------------------------------------------
 ```{r}
 

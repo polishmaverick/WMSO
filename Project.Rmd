@@ -3,7 +3,12 @@ title: "Outliers detection - Airbnb New York City 2019"
 author: "Jarosław Szewczyk"
 date: '2023-03-28'
 output: html_document
+theme: cerulean
 ---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ---------------------------------------------------------------------------------------------------
 #Przygotowanie środowiska
@@ -13,7 +18,7 @@ output: html_document
 packages = c("dplyr", "robustbase")
 install.packages(packages)
 library("dplyr")
-library("robust")
+library("robustbase")
 ```
 
 ##Wczytanie zbioru danych

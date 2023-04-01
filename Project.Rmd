@@ -8,6 +8,11 @@ output:
 ---
 <style>
 
+*
+{
+  font-family: Courier New, monospace;
+}
+
 #sidebar
 {
   position: fixed;
@@ -16,7 +21,7 @@ output:
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #14213d; /* Background of left center sidebar */
+  background: #14213d; /* navy */
   z-index: 200;
   font-size: 16px;
 }
@@ -29,51 +34,33 @@ output:
 
 #sidebar h2
 {
-  color: #14213d;
-  background: #fca311; /* Background of left top sidebar */
-  text-decoration: underline;
-  cursor: pointer;
+  color: #14213d; /* navy */;
+  background: #fca311; /* mango */
 }
 
 #sidebar h2 a
 {
-  color: #14213d;
+  color: #14213d; /* navy */;
 }
 
 #sidebar a:hover
 {
   color: #ffffff;
-  background-color: #bf0063;
+  background-color: #bf0063; /* raspberry */
   cursor: pointer;
 }
 
-td {
-  color: #f7f3eb;
-}
-
-code.sourceCode.r
+#sidebar a:active
 {
-  background: #f7f3eb;
-  color: #fca311;
-}
-
-h1
-{
-  color: #14213d;
-  text-decoration: none;
-}
-
-h2, h3, h4, h5, h6, legend
-{
-  color: #14213d;
-  text-decoration: underline;
-  text-decoration-color: #bf0063;
+  color: #ffffff;
+  background-color: #bf0063; /* raspberry */
+  cursor: pointer;
 }
 
 #postamble
 {
-  background: #fca311; /* Background of about me section */
-  border-top: solid 10px #bf0063; /* Top line about me section*/
+  background: #fca311; /* mango */
+  border-top: solid 10px #bf0063; /* raspberry */
   font-family: "Lato","proxima-nova","Helvetica Neue",Arial,sans-serif;
   font-size: 90%;
   z-index: 400;
@@ -82,7 +69,7 @@ h2, h3, h4, h5, h6, legend
 
 #postamble .status
 {
-  color: #14213d;
+  color: #14213d; /* navy */;
   background: red; /* Background of about me section */
   border-top: solid 10px #211103;
   font-family: "Lato","proxima-nova","Helvetica Neue",Arial,sans-serif;
@@ -93,60 +80,44 @@ h2, h3, h4, h5, h6, legend
 
 #postamble .author
 {
-  color: #14213d;
+  color: #14213d; /* navy */;
   font-weight: bold;
 }
 
 #postamble .date
 {
-  color: #14213d;
-}
-
-p
-{
-  color: #14213d;
+  color: #14213d; /* navy */;
 }
 
 #content
 {
-  background: #e5e5e5;
+  background: #e5e5e5; /* grey */
 }
 
 #content pre
 {
-  border: 3px solid #bf0063;
-  color: #fca311;
+  border: 3px solid #bf0063; /* raspberry */
+  color: #fca311; /* mango */
 }
 
 #content div.sourceCode
 {
-  background: #e5e5e5;
-}
-
-pre
-{
-  background-color: #14213d;
-  color: #14213d;
-}
-
-pre code
-{
-  color: #fca311;
+  background: #e5e5e5; /* grey */
 }
 
 #toc ul.nav li.active ul li.active a
 {
-  background-color: #fca311;
-  color: #14213d !important;
+  background-color: #fca311; /* mango */
+  color: #14213d; /* navy */ !important;
   font-weight: normal !important;
 }
 
 #toc ul.nav li.active ul li a
 {
-  background-color: #14213d;
+  background-color: #14213d; /* navy */;
   color: #ffffff;
   font-weight: normal;
-  border-right: solid 1px #14213d !important;
+  border-right: solid 1px #14213d; /* navy */ !important;
 }
 
 #toc ul.nav li.active a
@@ -158,72 +129,64 @@ pre code
 
 #toc ul.nav > li.active > a
 {
-  color: #14213d;
-  background-color: #fca311;
+  color: #14213d; /* navy */;
+  background-color: #fca311; /* mango */
 }
 
-#main table:not(.dataTable) td, #main table:not(.dataTable) th
+pre
 {
-  background: #00bf83;
-  border: #00bf83; /* Przerwy */
+  background-color: #14213d; /* navy */;
+  color: #14213d; /* navy */;
 }
 
-/* Code highlight */
-
-code span.fu
+pre code
 {
-  color: #fca311;
+  color: #fca311; /* mango */
 }
 
-code span.sc
+td
 {
-  color: #fca311;
+  color: #f7f3eb;
 }
 
-code span.dv
+p
 {
-  color: #fca311;
+  color: #14213d; /* navy */;
 }
 
-code span.in
+h1
 {
-  color: #fca311;
+  color: #14213d; /* navy */;
+  text-decoration: none;
+  font-family: Courier New, monospace;
 }
 
-code span.cn
+h2, h3, h4, h5, h6, legend
 {
-  color: #fca311;
- 
+  color: #14213d; /* navy */;
+  font-family: Courier New, monospace;
 }
 
-code span.st
+code.sourceCode.r
 {
-  color: #fca311;
+  background: #f7f3eb;
+  color: #fca311; /* mango */
 }
 
-code span.ot
-{
-  color: #fca311;
-}
-
-code span.cf
-{
-  color: #fca311;
-}
-
+code span.fu, 
+code span.at, 
+code span.fl,
+code span.sc,
+code span.dv,
+code span.in,
+code span.cn,
+code span.st,
+code span.ot,
+code span.cf,
 code span.co
 {
-  color: #fca311;
-}
-
-code span.fl
-{
-  color: #fca311;
-}
-
-code span.at
-{
-  color: #fca311;
+  color: #fca311; /* mango */
+  font-weight: normal;
 }
 
 </style>

@@ -6,7 +6,11 @@ output:
   rmdformats::readthedown:
       highlight: default
 ---
+
+```{=html}
 <style>
+
+/* CHANGE: Default 150% zoom in html file. */
 
 *
 {
@@ -190,28 +194,62 @@ code span.co
 }
 
 </style>
----
+```
+
+------------------------------------------------------------------------
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# Przygotowanie środowiska
+## Zainstalowanie i załadowanie pakietów
 
-Zainstalowanie i załadowanie pakietów
 ```{r}
-library("dplyr")
-library("rmarkdown")
-library("rmdformats")
-library("robustbase")
+#dplyr
+if(!require(dplyr)) {
+  install.packages("dplyr")
+  library(dplyr)
+}
+
+#stats
+if(!require(stats)) {
+  install.packages("stats")
+  library(stats)
+}
+
+#dbscan
+if(!require(dbscan)) {
+  install.packages("dbscan")
+  library(dbscan)
+}
+
+#rmarkdown
+if(!require(rmarkdown)) {
+  install.packages("rmarkdown")
+  library(rmarkdown)
+}
+
+#rmdformats
+if(!require(rmdformats)) {
+  install.packages("rmdformats")
+  library(rmdformats)
+}
+
+#robustbase
+if(!require(robustbase)) {
+  install.packages("robustbase")
+  library(robustbase)
+}
 ```
 
 Wczytanie zbioru danych
+
 ```{r}
 data <- read.csv("AB_NYC_2019.csv", sep = ",")
 ```
 
 Wstępna analiza zbioru danych
+
 ```{r}
 #Wymiary zbioru
 dim(data)
@@ -225,8 +263,14 @@ colSums(is.na(data))
 
 # Wykrywanie elementów odstających - 1 wymiar
 
-## Reguła 3 sigma
+## Metoda 1: Reguła 3 sigma
+
 ```{r}
+#Weryfikacja normalności rozkładu zmiennej
+
+#Test normalności Cramera von Misesa
+cvm.test(data$price, pnorm, mean = mean(data$price), sd = sd(data$price))
+
 threesigma.rule <- function(data, var, t = 3, RemoveNAs = FALSE){
   mu <- mean(data[[var]], na.rm = RemoveNAs)
   sigma <- sd(data[[var]], na.rm = RemoveNAs)
@@ -238,7 +282,8 @@ outliers_threesigma <- threesigma.rule(data, "price")
 head(outliers_threesigma, 5)
 ```
 
-## Metoda Tukeya
+## Metoda 2: Metoda Tukeya
+
 ```{r}
 outliers <- function(data, var, coef = 1.5) {
   bp <- boxplot(data[[var]], plot = FALSE)
@@ -251,7 +296,8 @@ outliers_Tukey <- outliers(data, "price")
 head(outliers_Tukey, 5)
 ```
 
-## Reguła Hampela
+## Metoda 3: Reguła Hampela
+
 ```{r}
 hampel.rule <- function(data, var_name, t = 3, RemoveNAs = FALSE){
   x <- data[[var_name]]
@@ -270,46 +316,81 @@ outliers_hampel <- hampel.rule(data, "price")
 head(outliers_hampel, 5)
 ```
 
-## Z-score
+## Metoda 4: Z-score
+
 ```{r}
 data$z_scores <- (abs(data$price - mean(data$price))/sd(data$price))
+
 outliers_zscore_sd <- data[data$z_scores > 3,][,c("id", "price")]
 head(outliers_zscore_sd, 5)
 
+###
+
 data$z_scores <- (abs(data$price - median(data$price))/mad(data$price))
+
 outliers_zscore_mad <- data[data$z_scores > 3.5,][,c("id", "price")]
 head(outliers_zscore_mad, 5)
 ```
 
-Do wykrycia wartości odstających można podejść podobnie jak do prognoz, które stawiane są różnymi metodami. Racjonalnym wyborem wydaje się być wyciąganie średniej z prognoz uzyskanych na podstawie różnych metod. W przypadku wartości odstających analogią może być wybór tych obserwacji, które zostały zaklasyfikowane jako outliery przez wszystkie metody lub jak największą liczbę metod.
+## Metoda 5: MAD - Median Absolute Deviation
 
-Ramka danych z podsumowaniem wyników - 1 wymiar
 ```{r}
+MAD <- mad(data$price)
+median(data$price) + 3 * MAD
+
+outliers_MAD <- data %>% filter(price > (median(data$price) + 3 * MAD)) %>% select(id, price)
+head(outliers_MAD, 5)
+```
+
+## Metoda 6: LOF - Local Outlier Factor
+```{r}
+#Wybór minPts
+lof_scores <- lof(as.matrix(data$price), minPts = 60)
+table(lof_scores)
+inf_rows <- which(is.infinite(lof_scores))
+
+outliers_LOF <- data[c(inf_rows), c("id", "price")]
+head(outliers_LOF, 5)
+
+#Uwaga
+max(outlier_LOF$price)
+```
+
+### Do wykrycia wartości odstających można podejść podobnie jak do prognoz, które stawiane są różnymi metodami. Racjonalnym wyborem wydaje się być wyciąganie średniej z prognoz uzyskanych na podstawie różnych metod. W przypadku wartości odstających analogią może być wybór tych obserwacji, które zostały zaklasyfikowane jako outliery przez wszystkie metody lub jak największą liczbę metod.
+
+```{r}
+#Ramka danych z podsumowaniem wyników - 1 wymiar
 data_one_dim <- data
 ```
 
-Zdefiniowanie dla każdej z metod zmiennej om (outliers membership) świadczącej o przynależności do grupy outlierów
+### Zdefiniowanie dla każdej z metod zmiennej om (outliers membership) świadczącej o przynależności do grupy outlierów
+
 ```{r}
 data_one_dim$om1 <- as.numeric(data$id %in% outliers_threesigma$id)
 data_one_dim$om2 <- as.numeric(data$id %in% outliers_Tukey$id)
 data_one_dim$om3 <- as.numeric(data$id %in% outliers_hampel$id)
 data_one_dim$om4 <- as.numeric(data$id %in% outliers_zscore_sd$id)
 data_one_dim$om5 <- as.numeric(data$id %in% outliers_zscore_mad$id)
+data_one_dim$om6 <- as.numeric(data$id %in% outliers_MAD$id)
+data_one_dim$om7 <- as.numeric(data$id %in% outliers_LOF$id)
 ```
 
-Tabela ze wskazaniami
+### Tabela ze wskazaniami
+
 ```{r}
 outliers_membership <- grep("om.$", names(data_one_dim), value=TRUE)
 data_one_dim$count <- rowSums(data_one_dim[, outliers_membership])
 table(data_one_dim$count)
 ```
 
-Które metody nie wskazały przynależności do grupy outlierów?
+### Które metody nie wskazały przynależności do grupy outlierów?
+
 ```{r}
 colSums(data_one_dim[data_one_dim$count == 3, c("id", outliers_membership)])
 ```
 
-Wartość dla zmiennej 'price', od której w oparciu o wszystkie metody zaczyna się grupa outlierów
+#### Wartość dla zmiennej 'price', od której w oparciu o wszystkie metody zaczyna się grupa outlierów
+
 ```{r}
 outlier_one_dim_min <- min(data_one_dim[data_one_dim$count == 5, c("id", "price")])
 outlier_one_dim_min

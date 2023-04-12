@@ -47,10 +47,10 @@ output:
   color: #14213d; /* navy */;
 }
 
-#sidebar a:hover
+a:hover
 {
   color: #ffffff;
-  background-color: #bf0063; /* raspberry */
+  background-color: #bf0063 !important; /* raspberry */
   cursor: pointer;
 }
 
@@ -76,7 +76,6 @@ output:
   color: #14213d; /* navy */;
   background: red; /* Background of about me section */
   border-top: solid 10px #211103;
-  font-family: "Lato","proxima-nova","Helvetica Neue",Arial,sans-serif;
   font-size: 90%;
   z-index: 400;
   padding: 12px;
@@ -223,6 +222,12 @@ if(!require(dbscan)) {
   library(dbscan)
 }
 
+#DepthProc
+if(!require(DepthProc)) {
+  install.packages("DepthProc")
+  library(DepthProc)
+}
+
 #rmarkdown
 if(!require(rmarkdown)) {
   install.packages("rmarkdown")
@@ -245,7 +250,7 @@ if(!require(robustbase)) {
 Wczytanie zbioru danych
 
 ```{r}
-data <- read.csv("AB_NYC_2019.csv", sep = ",")
+data <- read.csv("https://raw.githubusercontent.com/polishmaverick/WMSO/master/AB_NYC_2019.csv", sep = ",")
 ```
 
 Wstępna analiza zbioru danych
@@ -269,7 +274,7 @@ colSums(is.na(data))
 #Weryfikacja normalności rozkładu zmiennej
 
 #Test normalności Cramera von Misesa
-cvm.test(data$price, pnorm, mean = mean(data$price), sd = sd(data$price))
+#cvm.test(data$price, pnorm, mean = mean(data$price), sd = sd(data$price))
 
 threesigma.rule <- function(data, var, t = 3, RemoveNAs = FALSE){
   mu <- mean(data[[var]], na.rm = RemoveNAs)
@@ -338,7 +343,8 @@ head(outliers_zscore_mad, 5)
 MAD <- mad(data$price)
 median(data$price) + 3 * MAD
 
-outliers_MAD <- data %>% filter(price > (median(data$price) + 3 * MAD)) %>% select(id, price)
+outliers_MAD <- data %>% filter(price > (median(data$price) + 3 * MAD)) 
+outliers_MAD <- outliers_MAD[, c("id", "price")]
 head(outliers_MAD, 5)
 ```
 
@@ -353,7 +359,17 @@ outliers_LOF <- data[c(inf_rows), c("id", "price")]
 head(outliers_LOF, 5)
 
 #Uwaga
-max(outlier_LOF$price)
+max(outliers_LOF$price)
+```
+
+## Metoda 7: Depth-based
+```{r}
+price_depth <- depth(data$price)
+cutoffs <- quantile(price_depth, c(0.05))
+outlier_ids <- data$id[price_depth < cutoffs]
+
+outliers_depth <- data[data$id %in% outlier_ids, c("id", "price")]
+head(outliers_depth, 5)
 ```
 
 ### Do wykrycia wartości odstających można podejść podobnie jak do prognoz, które stawiane są różnymi metodami. Racjonalnym wyborem wydaje się być wyciąganie średniej z prognoz uzyskanych na podstawie różnych metod. W przypadku wartości odstających analogią może być wybór tych obserwacji, które zostały zaklasyfikowane jako outliery przez wszystkie metody lub jak największą liczbę metod.
@@ -373,6 +389,7 @@ data_one_dim$om4 <- as.numeric(data$id %in% outliers_zscore_sd$id)
 data_one_dim$om5 <- as.numeric(data$id %in% outliers_zscore_mad$id)
 data_one_dim$om6 <- as.numeric(data$id %in% outliers_MAD$id)
 data_one_dim$om7 <- as.numeric(data$id %in% outliers_LOF$id)
+data_one_dim$om8 <- as.numeric(data$id %in% outliers_depth$id)
 ```
 
 ### Tabela ze wskazaniami
@@ -383,17 +400,11 @@ data_one_dim$count <- rowSums(data_one_dim[, outliers_membership])
 table(data_one_dim$count)
 ```
 
-### Które metody nie wskazały przynależności do grupy outlierów?
+#### Obserwacje wskazane jako outliery przez wszystkie metody
 
 ```{r}
-colSums(data_one_dim[data_one_dim$count == 3, c("id", outliers_membership)])
-```
-
-#### Wartość dla zmiennej 'price', od której w oparciu o wszystkie metody zaczyna się grupa outlierów
-
-```{r}
-outlier_one_dim_min <- min(data_one_dim[data_one_dim$count == 5, c("id", "price")])
-outlier_one_dim_min
+outlier_one_dim <- data_one_dim[data_one_dim$count == max(unique(data_one_dim$count)), c("id", "price")]
+outlier_one_dim
 ```
 
 # Wykrywanie elementów odstających - 2 wymiary lub więcej

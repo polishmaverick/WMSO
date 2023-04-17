@@ -234,6 +234,18 @@ if(!require(rmarkdown)) {
   library(rmarkdown)
 }
 
+#nortest
+if(!require(nortest)) {
+  install.packages("nortest")
+  library(nortest)
+}
+
+#psych
+if(!require(psych)) {
+  install.packages("psych")
+  library(psych)
+}
+
 #rmdformats
 if(!require(rmdformats)) {
   install.packages("rmdformats")
@@ -274,7 +286,7 @@ colSums(is.na(data))
 #Weryfikacja normalności rozkładu zmiennej
 
 #Test normalności Cramera von Misesa
-#cvm.test(data$price, pnorm, mean = mean(data$price), sd = sd(data$price))
+#cvm.test(data$price, psnorm, mean = mean(data$price), sd = sd(data$price))
 
 threesigma.rule <- function(data, var, t = 3, RemoveNAs = FALSE){
   mu <- mean(data[[var]], na.rm = RemoveNAs)
@@ -400,7 +412,7 @@ data_one_dim$count <- rowSums(data_one_dim[, outliers_membership])
 table(data_one_dim$count)
 ```
 
-#### Obserwacje wskazane jako outliery przez wszystkie metody
+### Obserwacje wskazane jako outliery przez wszystkie metody
 
 ```{r}
 outlier_one_dim <- data_one_dim[data_one_dim$count == max(unique(data_one_dim$count)), c("id", "price")]
@@ -409,6 +421,77 @@ outlier_one_dim
 
 # Wykrywanie elementów odstających - 2 wymiary lub więcej
 
+### Wybór zmiennych do wykrywania outlierów - 2 wymiary lub więcej
 ```{r}
+vars <- c("price",
+          "minimum_nights",
+          "calculated_host_listings_count",
+          "availability_365",
+          "number_of_reviews")
 
+data_subset <- data[, vars]
+```
+
+
+## Metoda 1: PCA (Analiza czynnikowa)
+```{r}
+### Test Kaisera-Meyera-Olkina
+KMO(data_subset)
+
+### Analiza czynnikowa
+pca <- prcomp(data_subset, scale. = TRUE)
+
+### Obliczenie odległości od punktu środkowego PCA
+data_subset_pca <- predict(pca, data_subset)
+distances <- apply(data_subset_pca, 1, function(x) sqrt(sum(x^2)))
+
+### Wybór obserwacji z odległością większą niż 3 razy odchylenie standardowe
+threshold <- mean(distances) + 3*sd(distances)
+outliers <- which(distances > threshold)
+
+### wyświetlenie ramki danych z wartościami odstającymi
+outliers_PCA <- data[c(outliers), c("id", "price")]
+head(outliers_PCA, 5)
+```
+
+## Metoda 2: Odległość Mahalanobisa
+```{r}
+m_dist <- mahalanobis(data_subset, colMeans(data_subset), cov(data_subset))
+threshold <- sqrt(qchisq(p = 0.975, df = ncol(data_subset)))
+
+data_subset[m_dist > threshold,]
+
+### Obliczenie odległości
+distances <- mahalanobis(data_subset, colMeans(data_subset), cov(data_subset))
+
+###
+cutoff <- qchisq(p = 0.95 , df = ncol(data_subset))
+
+### Display observation whose distance greater than cutoff value
+outliers_Mahalanobis <- data[distances > cutoff ,]
+head(outliers_Mahalanobis, 5)
+```
+
+## Metoda 3: Metoda DBSCAN (Density-based Spatial Clustering of Applications with Noise)
+```{r}
+### Podział zbioru na 10 części ze względów wydajnościowych
+split_data_subset <- split(data_subset, rep(1:10, length.out = nrow(data_subset)))
+
+### Funkcja do analizy każdej części danych przy użyciu dbscan
+analyze_subset <- function(data_subset_subset, eps, MinPts)
+{
+  dbscan(data_subset_subset, eps = eps, MinPts = MinPts)
+}
+
+### Analiza każdej części danych przy użyciu funkcji lapply
+results <- lapply(split_data_subset, analyze_subset, eps = 100, MinPts = 60)
+
+outliers <- c()
+for (i in seq_along(results)) {
+  subset_outliers <- which(results[[i]]$cluster == 0)
+  outliers <- c(outliers, subset_outliers)
+}
+
+outliers_DBSCAN <- as.data.frame(outliers)
+head(outliers_DBSCAN, 50)
 ```

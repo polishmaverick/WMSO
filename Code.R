@@ -32,6 +32,3 @@ inf_rows <- which(is.infinite(lof_scores))
 outlier_LOF <- df[c(inf_rows), c("id", "a")]
 outlier_LOF
 max(outlier_LOF$a)
-
-?cvm.test
-library(nortest)

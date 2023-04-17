@@ -204,34 +204,22 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Zainstalowanie i załadowanie pakietów
 
 ```{r}
-#dplyr
-if(!require(dplyr)) {
-  install.packages("dplyr")
-  library(dplyr)
-}
-
-#stats
-if(!require(stats)) {
-  install.packages("stats")
-  library(stats)
-}
-
 #dbscan
 if(!require(dbscan)) {
   install.packages("dbscan")
   library(dbscan)
 }
 
+#dplyr
+if(!require(dplyr)) {
+  install.packages("dplyr")
+  library(dplyr)
+}
+
 #DepthProc
 if(!require(DepthProc)) {
   install.packages("DepthProc")
   library(DepthProc)
-}
-
-#rmarkdown
-if(!require(rmarkdown)) {
-  install.packages("rmarkdown")
-  library(rmarkdown)
 }
 
 #nortest
@@ -246,16 +234,28 @@ if(!require(psych)) {
   library(psych)
 }
 
+#robustbase
+if(!require(robustbase)) {
+  install.packages("robustbase")
+  library(robustbase)
+}
+
+#rmarkdown
+if(!require(rmarkdown)) {
+  install.packages("rmarkdown")
+  library(rmarkdown)
+}
+
 #rmdformats
 if(!require(rmdformats)) {
   install.packages("rmdformats")
   library(rmdformats)
 }
 
-#robustbase
-if(!require(robustbase)) {
-  install.packages("robustbase")
-  library(robustbase)
+#stats
+if(!require(stats)) {
+  install.packages("stats")
+  library(stats)
 }
 ```
 
@@ -283,21 +283,14 @@ colSums(is.na(data))
 ## Metoda 1: Reguła 3 sigma
 
 ```{r}
-#Weryfikacja normalności rozkładu zmiennej
+### Weryfikacja normalności rozkładu zmiennej
 
 #Test normalności Cramera von Misesa
-#cvm.test(data$price, psnorm, mean = mean(data$price), sd = sd(data$price))
+cvm.test(data$price)
 
-threesigma.rule <- function(data, var, t = 3, RemoveNAs = FALSE){
-  mu <- mean(data[[var]], na.rm = RemoveNAs)
-  sigma <- sd(data[[var]], na.rm = RemoveNAs)
-  out <- abs(data[[var]] - mu) > t*sigma
-  data.frame(id = data$id[out], var = data[[var]][out])
-}
-
-outliers_threesigma <- threesigma.rule(data, "price")
-head(outliers_threesigma, 5)
 ```
+### Brak spełnienia założenia o normalności rozkładu zmiennej price.
+### Skorzystanie z reguły 3 sigma jest merytorycznie nieuzasadnione.
 
 ## Metoda 2: Metoda Tukeya
 
@@ -341,8 +334,6 @@ data$z_scores <- (abs(data$price - mean(data$price))/sd(data$price))
 outliers_zscore_sd <- data[data$z_scores > 3,][,c("id", "price")]
 head(outliers_zscore_sd, 5)
 
-###
-
 data$z_scores <- (abs(data$price - median(data$price))/mad(data$price))
 
 outliers_zscore_mad <- data[data$z_scores > 3.5,][,c("id", "price")]
@@ -360,6 +351,12 @@ outliers_MAD <- outliers_MAD[, c("id", "price")]
 head(outliers_MAD, 5)
 ```
 
+### Metoda MAD (Median Absolute Deviation) jest metodą wykrywania wartości odstających, która opiera się na średnim odchyleniu bezwzględnym (średniej arytmetycznej z odchyleń bezwzględnych dla wszystkich elementów zbioru danych)
+
+### W tej metodzie, najpierw obliczana jest wartość mediany oraz MAD Następnie, ustala się próg, powyżej którego wartości zmiennej objaśniającej są uważane za wartości odstające. W przykładzie powyżej próg ten to trzykrotność wartości MAD dodana do mediany.
+
+### Metoda MAD jest przydatna w przypadku danych o rozkładzie skośnym, gdzie tradycyjne metody, takie jak wykrywanie wartości odstających na podstawie wartości odległości międzykwartylowej, mogą być mniej skuteczne.
+
 ## Metoda 6: LOF - Local Outlier Factor
 ```{r}
 #Wybór minPts
@@ -370,9 +367,15 @@ inf_rows <- which(is.infinite(lof_scores))
 outliers_LOF <- data[c(inf_rows), c("id", "price")]
 head(outliers_LOF, 5)
 
-#Uwaga
+### Uwaga - Najwyższa wartość zmiennej price wynosi 625.
+### To przykład na to, że outliery, to nie tylko wartości ekstremalnie niskie
+### lub wysokie, ale po prostu nietypowe.
 max(outliers_LOF$price)
 ```
+
+### Metoda LOF (Local Outlier Factor) to metoda wykrywania wartości odstających, która opiera się na pomiarze lokalnego zagęszczenia punktów wokół każdej obserwacji w zbiorze danych. 
+
+### W tej metodzie, najpierw wybierany jest parametr minPts, który określa minimalną liczbę punktów potrzebną do utworzenia skupiska. Następnie obliczane są LOF scores dla każdej obserwacji w zbiorze danych. LOF score dla każdej obserwacji mierzy, jak bardzo punkt ten różni się od swojego otoczenia pod względem zagęszczenia punktów. Im wyższy LOF score, tym bardziej punkt różni się od swojego otoczenia i jest bardziej prawdopodobne, że jest wartością odstającą.
 
 ## Metoda 7: Depth-based
 ```{r}
@@ -384,6 +387,10 @@ outliers_depth <- data[data$id %in% outlier_ids, c("id", "price")]
 head(outliers_depth, 5)
 ```
 
+### Metoda depth-based to metoda wykrywania wartości odstających, która opiera się na określeniu głębokości (depth) punktu w przestrzeni danych. Głębokość punktu to miara, która określa, jak wiele innych punktów w zbiorze danych jest bliżej centrum zbioru niż dany punkt. W tej metodzie, najpierw oblicza się głębokość dla każdej obserwacji w zbiorze danych przy użyciu funkcji depth w R. Następnie, oblicza się próg odcięcia, jako percentyl rozkładu głębokości. Punkty, których głębokość jest poniżej progu, są uważane za wartości odstające.
+
+## Podsumowanie
+
 ### Do wykrycia wartości odstających można podejść podobnie jak do prognoz, które stawiane są różnymi metodami. Racjonalnym wyborem wydaje się być wyciąganie średniej z prognoz uzyskanych na podstawie różnych metod. W przypadku wartości odstających analogią może być wybór tych obserwacji, które zostały zaklasyfikowane jako outliery przez wszystkie metody lub jak największą liczbę metod.
 
 ```{r}
@@ -394,14 +401,13 @@ data_one_dim <- data
 ### Zdefiniowanie dla każdej z metod zmiennej om (outliers membership) świadczącej o przynależności do grupy outlierów
 
 ```{r}
-data_one_dim$om1 <- as.numeric(data$id %in% outliers_threesigma$id)
-data_one_dim$om2 <- as.numeric(data$id %in% outliers_Tukey$id)
-data_one_dim$om3 <- as.numeric(data$id %in% outliers_hampel$id)
-data_one_dim$om4 <- as.numeric(data$id %in% outliers_zscore_sd$id)
-data_one_dim$om5 <- as.numeric(data$id %in% outliers_zscore_mad$id)
-data_one_dim$om6 <- as.numeric(data$id %in% outliers_MAD$id)
-data_one_dim$om7 <- as.numeric(data$id %in% outliers_LOF$id)
-data_one_dim$om8 <- as.numeric(data$id %in% outliers_depth$id)
+data_one_dim$om1 <- as.numeric(data$id %in% outliers_Tukey$id)
+data_one_dim$om2 <- as.numeric(data$id %in% outliers_hampel$id)
+data_one_dim$om3 <- as.numeric(data$id %in% outliers_zscore_sd$id)
+data_one_dim$om4 <- as.numeric(data$id %in% outliers_zscore_mad$id)
+data_one_dim$om5 <- as.numeric(data$id %in% outliers_MAD$id)
+data_one_dim$om6 <- as.numeric(data$id %in% outliers_LOF$id)
+data_one_dim$om7 <- as.numeric(data$id %in% outliers_depth$id)
 ```
 
 ### Tabela ze wskazaniami
@@ -416,8 +422,11 @@ table(data_one_dim$count)
 
 ```{r}
 outlier_one_dim <- data_one_dim[data_one_dim$count == max(unique(data_one_dim$count)), c("id", "price")]
-outlier_one_dim
+head(outlier_one_dim, 5)
 ```
+### Finalnie nie było żadnej obserwacji, która zostałaby zakwalifikowana jako outlier przez wszystkie 7 metod.
+
+### 631 obserwacji zostało wskazanych przez 6 metod, jako nietypowe, co daje ok. 1.2% obserwacji całego zbioru danych.
 
 # Wykrywanie elementów odstających - 2 wymiary lub więcej
 
@@ -449,18 +458,19 @@ distances <- apply(data_subset_pca, 1, function(x) sqrt(sum(x^2)))
 threshold <- mean(distances) + 3*sd(distances)
 outliers <- which(distances > threshold)
 
-### wyświetlenie ramki danych z wartościami odstającymi
+### Wyświetlenie ramki danych z wartościami odstającymi
 outliers_PCA <- data[c(outliers), c("id", "price")]
 head(outliers_PCA, 5)
 ```
 
+### Metoda PCA jest techniką redukcji wymiarowości, która pozwala na zidentyfikowanie dominujących czynników wpływających na zmienność w zbiorze danych. Technika ta polega na transformacji pierwotnych zmiennych na nowe zmienne, nazywane składowymi głównymi, które są liniowymi kombinacjami pierwotnych zmiennych.
+
+### W metodzie tej, najpierw przeprowadza się test Kaisera-Meyera-Olkina, który pomaga w ocenie przydatności danych dla analizy czynnikowej. Wartość dla testu powinna być jak najwyższa (powinna wynieść minimum 0.6 - wartości niższe są dozwolone, natomiast obniżają jakość wyników) Następnie, przeprowadza się analizę czynnikową przy użyciu funkcji prcomp w R. W kolejnym kroku, oblicza się odległość każdej obserwacji od środka PCA przy użyciu przewidywanych wartości z PCA za pomocą funkcji predict. Następnie, wybiera się wartości odstające, które są bardziej oddalone od środka PCA niż próg określony jako średnia wartość odległości z dodanym trzykrotnym odchyleniem standardowym.
+
+### Metoda PCA jest przydatna w redukcji wymiarowości i identyfikacji istotnych czynników wpływających na zmienność w danych, ale może mieć ograniczenia w wykrywaniu pojedynczych punktów odstających. Dlatego metoda ta często jest stosowana w połączeniu z innymi metodami wykrywania odstających wartości.
+
 ## Metoda 2: Odległość Mahalanobisa
 ```{r}
-m_dist <- mahalanobis(data_subset, colMeans(data_subset), cov(data_subset))
-threshold <- sqrt(qchisq(p = 0.975, df = ncol(data_subset)))
-
-data_subset[m_dist > threshold,]
-
 ### Obliczenie odległości
 distances <- mahalanobis(data_subset, colMeans(data_subset), cov(data_subset))
 
@@ -474,16 +484,16 @@ head(outliers_Mahalanobis, 5)
 
 ## Metoda 3: Metoda DBSCAN (Density-based Spatial Clustering of Applications with Noise)
 ```{r}
-### Podział zbioru na 10 części ze względów wydajnościowych
+#Podział zbioru na 10 części ze względów wydajnościowych
 split_data_subset <- split(data_subset, rep(1:10, length.out = nrow(data_subset)))
 
-### Funkcja do analizy każdej części danych przy użyciu dbscan
+#Funkcja do analizy każdej części danych przy użyciu dbscan
 analyze_subset <- function(data_subset_subset, eps, MinPts)
 {
   dbscan(data_subset_subset, eps = eps, MinPts = MinPts)
 }
 
-### Analiza każdej części danych przy użyciu funkcji lapply
+#Analiza każdej części danych przy użyciu funkcji lapply
 results <- lapply(split_data_subset, analyze_subset, eps = 100, MinPts = 60)
 
 outliers <- c()
@@ -493,5 +503,62 @@ for (i in seq_along(results)) {
 }
 
 outliers_DBSCAN <- as.data.frame(outliers)
-head(outliers_DBSCAN, 50)
+head(outliers_DBSCAN, 5)
 ```
+
+### Metoda DBSCAN (Density-based Spatial Clustering of Applications with Noise) jest jednym z algorytmów grupowania (clusteringu) danych, który może również wykrywać punkty odstające (outliery). Metoda ta opiera się na wykorzystaniu gęstości punktów danych w przestrzeni, aby podzielić je na grupy. 
+
+### Algorytm działa poprzez wybór przypadkowego punktu danych i sprawdzenie, czy znajduje się w obszarze gęstościowo zbitej grupy punktów (tzw. "core group"), czy też jest poza tym obszarem. Jeśli punkt znajduje się w core group, zostaje dodany do tej grupy. W przeciwnym przypadku punkt zostaje oznaczony jako punkt szumowy (noise point) lub outlier. Algorytm kontynuuje w ten sposób, analizując kolejne punkty danych, aż do wyczerpania zbioru danych.
+
+## Podsumowanie
+
+```{r}
+#Ramka danych z podsumowaniem wyników - 1 wymiar
+data_mul_dim <- data
+```
+
+### Zdefiniowanie dla każdej z metod zmiennej om (outliers membership) świadczącej o przynależności do grupy outlierów
+
+```{r}
+data_mul_dim$om1 <- as.numeric(data$id %in% outliers_PCA$id)
+data_mul_dim$om2 <- as.numeric(data$id %in% outliers_Mahalanobis$id)
+data_mul_dim$om3 <- as.numeric(data$id %in% outliers_DBSCAN$id)
+```
+
+### Tabela ze wskazaniami
+
+```{r}
+outliers_membership <- grep("om.$", names(data_mul_dim), value=TRUE)
+data_mul_dim$count <- rowSums(data_mul_dim[, outliers_membership])
+table(data_mul_dim$count)
+```
+
+### Obserwacje wskazane jako outliery przez wszystkie metody
+
+```{r}
+outlier_mul_dim <- data_mul_dim[data_mul_dim$count == max(unique(data_mul_dim$count)),]
+head(outlier_mul_dim, 5)
+```
+
+### W przypadku wielu wymiarów również nie wskazano żadnej obserwacji, która zostałaby zakwalifikowana jako outlier przez wszystkie metody.
+
+### 952 obserwacje zostały wskazane przez 2 metody, jako nietypowe, co daje ok. 2% obserwacji całego zbioru danych.
+
+```{r}
+summary(data$price)
+summary(data[!(data$id %in% outlier_one_dim$id), ]$price)
+summary(data[!(data$id %in% outlier_mul_dim$id), ]$price)
+```
+
+### Poniżej można zauważyć, że pozbycie się ze zbioru outlierów wyznaczonych dla wielu wymiarów istotnie zwiększyło (prawie 3-krotnie) korelację między zmienną calculated_host_listings_count a minimum_nights. 
+### Wynika z tego, że nawet niewielka frakcja wartości nietypowych może silnie wpłynąć na zwiększenie (ujawnienie się) zależność pomiędzy zmiennymi. Niektóre narzędzia statystyczne wymagają tych powiązań, zatem pozbycie się outlierów ze zbioru może być niejednokrotnie użyteczne.
+
+```{r}
+cor(data[,"calculated_host_listings_count"], data[,"minimum_nights"])
+
+cor(data[!(data$id %in% outlier_one_dim$id), ][,"calculated_host_listings_count"], data[!(data$id %in% outlier_one_dim$id), ][,"minimum_nights"])
+
+cor(data[!(data$id %in% outlier_mul_dim$id), ][,"calculated_host_listings_count"], data[!(data$id %in% outlier_mul_dim$id), ][,"minimum_nights"])
+```
+
+### Podsumowując można stwierdzić, że metody wykrywania outlierów mogą dawać bardzo zróżnicowane wskazania i nie istnieje jedna najlepsza, uniwersalna metoda, którą należy stosować w każdym przypadku. Warto korzystać z wielu metod, mając na uwadze, że wewnątrz jednej metody dobór parmetrów może diametralnie zmienić wskazania obserwacji nietypowych.
